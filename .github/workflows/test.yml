@@ -1,0 +1,31 @@
+name: Build and test
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.9
+        env:
+          POSTGRES_USER: integration
+          POSTGRES_PASSWORD: test-only-ci-password
+          POSTGRES_DB: integration
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U integration -d integration"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+    env:
+      TEST_DB_URL: jdbc:postgresql://localhost:5432/integration
+      TEST_DB_PASSWORD: test-only-ci-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - run: mvn -B -ntp verify

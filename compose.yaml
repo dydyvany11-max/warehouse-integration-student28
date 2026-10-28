@@ -1,0 +1,37 @@
+name: myasnikov-integration
+services:
+  db:
+    image: postgres:16.9
+    environment:
+      POSTGRES_DB: integration
+      POSTGRES_USER: ${COURSE_DB_USER:-integration}
+      POSTGRES_PASSWORD: ${COURSE_DB_PASSWORD:?Set COURSE_DB_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:15428:5432"
+    volumes:
+      - history:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d integration"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  app:
+    build: .
+    profiles: ["app"]
+    environment:
+      COURSE_API_BASE_URL: ${COURSE_API_BASE_URL:-http://77.67.89.207:8080}
+      COURSE_STUDENT_ID: ${COURSE_STUDENT_ID:-28}
+      COURSE_API_USERNAME: ${COURSE_API_USERNAME:?Set COURSE_API_USERNAME in .env}
+      COURSE_API_PASSWORD: ${COURSE_API_PASSWORD:?Set COURSE_API_PASSWORD in .env}
+      COURSE_DB_URL: jdbc:postgresql://db:5432/integration
+      COURSE_DB_USER: ${COURSE_DB_USER:-integration}
+      COURSE_DB_PASSWORD: ${COURSE_DB_PASSWORD:?Set COURSE_DB_PASSWORD in .env}
+      COURSE_REPORT_DIR: /app/reports
+    volumes:
+      - ./reports:/app/reports
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  history:
